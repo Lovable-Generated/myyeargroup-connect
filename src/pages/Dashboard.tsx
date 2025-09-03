@@ -1,364 +1,676 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/enhanced-button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useNavigate, Link } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
-import { mockDoctors, mockPosts, mockJobs, mockProperties, getDoctorById, getFriendsPosts, Post } from '@/data/mockData';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/enhanced-button';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Heart,
   MessageCircle,
   Share2,
-  Plus,
   Users,
   Briefcase,
   Home,
   Calendar,
   MapPin,
   Clock,
-  PenTool,
-  Image as ImageIcon,
   Send,
+  Image,
+  FileText,
+  Lock,
+  Globe,
+  TrendingUp,
+  Award,
+  BookOpen,
+  UserPlus,
+  Bell,
+  Settings,
+  ChevronRight,
+  Stethoscope,
+  School,
+  MoreHorizontal,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  mockUsers,
+  mockPosts, 
+  mockJobs, 
+  mockProperties,
+  mockEvents,
+  mockYeargroups,
+  mockFriendships,
+  mockNotifications,
+  Post,
+  Comment
+} from '@/data/enhancedMockData';
+import { medicalSchools } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const { user, notifications } = useAuth();
+  const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [newPost, setNewPost] = useState('');
   const [postVisibility, setPostVisibility] = useState<'yeargroup' | 'friends'>('yeargroup');
-  const [isPosting, setIsPosting] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Get user's yeargroup
+  const userYeargroup = user && mockYeargroups.find(yg => 
+    yg.medicalSchoolId === user.medicalSchoolId && 
+    yg.graduationYear === user.graduationYear
+  );
+  
+  const userSchool = user && medicalSchools.find(s => s.id === user.medicalSchoolId);
+  
+  // Get user's friends
+  const userFriends = mockFriendships
+    .filter(f => 
+      (f.userId === user?.id || f.friendId === user?.id) && 
+      f.status === 'accepted'
+    )
+    .map(f => f.userId === user?.id ? f.friendId : f.userId);
+  
+  // Get feed posts (from friends and yeargroup)
+  const feedPosts = posts
+    .filter(p => 
+      (p.yeargroupId === userYeargroup?.id && p.visibility === 'yeargroup') ||
+      (userFriends.includes(p.userId) && p.visibility === 'friends') ||
+      p.userId === user?.id
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+  
+  // Get recent jobs
+  const recentJobs = mockJobs
+    .filter(j => j.isActive)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
+  
+  // Get recent properties
+  const recentProperties = mockProperties
+    .filter(p => p.isActive)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 2);
+  
+  // Get upcoming events
+  const upcomingEvents = mockEvents
+    .filter(e => 
+      e.yeargroupId === userYeargroup?.id && 
+      new Date(e.eventDate) > new Date()
+    )
+    .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+    .slice(0, 2);
+  
+  // Get unread notifications count
+  const unreadNotifications = notifications?.filter(n => !n.isRead).length || 0;
 
-  useEffect(() => {
-    // Check if user is authenticated
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    const userData = localStorage.getItem('user');
+  const handleCreatePost = () => {
+    if (!newPost.trim() || !user || !userYeargroup) return;
     
-    if (!isAuthenticated || !userData) {
-      navigate('/login');
-      return;
-    }
-
-    const parsedUser = JSON.parse(userData);
-    setUser(parsedUser);
+    const post: Post = {
+      id: `p${Date.now()}`,
+      userId: user.id,
+      yeargroupId: userYeargroup.id,
+      content: newPost,
+      visibility: postVisibility,
+      imageUrls: [],
+      documentUrls: [],
+      likesCount: 0,
+      commentsCount: 0,
+      likedBy: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     
-    // Load user's feed (yeargroup + friends posts)
-    const userDoc = getDoctorById(parsedUser.id) || mockDoctors[0];
-    const friendsPosts = getFriendsPosts(userDoc.id);
-    setPosts(friendsPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
-  }, [navigate]);
-
-  const handleCreatePost = async () => {
-    if (!newPost.trim()) return;
+    setPosts([post, ...posts]);
+    setNewPost('');
     
-    setIsPosting(true);
-    
-    // Simulate post creation
-    setTimeout(() => {
-      const post: Post = {
-        id: Date.now().toString(),
-        authorId: user.id,
-        content: newPost,
-        visibility: postVisibility,
-        likes: 0,
-        comments: [],
-        createdAt: new Date(),
-      };
-      
-      setPosts(prev => [post, ...prev]);
-      setNewPost('');
-      setIsPosting(false);
-      
-      toast({
-        title: "Post Created!",
-        description: `Your post has been shared with your ${postVisibility}.`,
-      });
-    }, 1000);
+    toast({
+      title: "Post created",
+      description: "Your post has been shared successfully.",
+    });
   };
 
   const handleLikePost = (postId: string) => {
-    setPosts(prev => 
-      prev.map(post => 
-        post.id === postId 
-          ? { ...post, likes: post.likes + 1 }
-          : post
-      )
-    );
-  };
-
-  const formatRelativeTime = (date: Date) => {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    if (!user) return;
     
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    return date.toLocaleDateString();
+    setPosts(posts.map(p => {
+      if (p.id === postId) {
+        const isLiked = p.likedBy.includes(user.id);
+        return {
+          ...p,
+          likesCount: isLiked ? p.likesCount - 1 : p.likesCount + 1,
+          likedBy: isLiked 
+            ? p.likedBy.filter(id => id !== user.id)
+            : [...p.likedBy, user.id]
+        };
+      }
+      return p;
+    }));
   };
 
-  const quickStats = {
-    yearGroupMembers: mockDoctors.filter(d => d.graduationYear === 2018 && d.isApproved).length,
-    friendsCount: user ? (getDoctorById(user.id)?.friends.length || 0) : 0,
-    activeJobs: mockJobs.length,
-    availableProperties: mockProperties.length,
+  const getPostAuthor = (userId: string) => {
+    return mockUsers.find(u => u.id === userId);
   };
+
+  // Calculate profile completion
+  const profileCompletion = user ? [
+    user.bio ? 20 : 0,
+    user.currentPosition ? 20 : 0,
+    user.location ? 20 : 0,
+    user.profileImageUrl ? 20 : 0,
+    user.emailVerified ? 20 : 0,
+  ].reduce((a, b) => a + b, 0) : 0;
 
   if (!user) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-    </div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar isAuthenticated={true} user={user} />
+      <Navbar />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Welcome Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
-              Welcome back, {user.name}
-            </h1>
-            <p className="text-muted-foreground">
-              Stay connected with your medical community
-            </p>
+        {/* Welcome Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={user.profileImageUrl} />
+                <AvatarFallback>
+                  {user.firstName[0]}{user.lastName[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-3xl font-bold">
+                  Welcome back, Dr. {user.firstName}!
+                </h1>
+                <div className="flex items-center space-x-3 text-muted-foreground mt-1">
+                  <span className="flex items-center">
+                    <Stethoscope className="h-4 w-4 mr-1" />
+                    {user.specialty}
+                  </span>
+                  <span className="flex items-center">
+                    <School className="h-4 w-4 mr-1" />
+                    {userSchool?.name}
+                  </span>
+                  <span className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Class of {user.graduationYear}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={() => navigate('/search')}>
+                <UserPlus className="h-4 w-4 mr-1" />
+                Find Colleagues
+              </Button>
+              <Button variant="outline" size="sm" className="relative">
+                <Bell className="h-4 w-4" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </Button>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Main Content */}
-            <div className="lg:col-span-3 space-y-6">
-              {/* Create Post */}
-              <Card className="shadow-soft border-0">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <PenTool className="w-5 h-5 text-primary" />
-                    <span>Share an Update</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="What's on your mind? Share news, insights, or ask questions..."
-                    value={newPost}
-                    onChange={(e) => setNewPost(e.target.value)}
-                    className="min-h-[100px] medical-input"
-                  />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Button variant="ghost" size="sm">
-                        <ImageIcon className="w-4 h-4" />
-                        Add Photo
-                      </Button>
-                      
-                      <Select value={postVisibility} onValueChange={(value: 'yeargroup' | 'friends') => setPostVisibility(value)}>
-                        <SelectTrigger className="w-48">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="yeargroup">Year Group</SelectItem>
-                          <SelectItem value="friends">Friends Only</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <Button
-                      variant="medical"
-                      onClick={handleCreatePost}
-                      disabled={!newPost.trim() || isPosting}
-                    >
-                      {isPosting ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                      {isPosting ? 'Posting...' : 'Post'}
-                    </Button>
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="border-0 shadow-soft">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Connections</p>
+                    <p className="text-2xl font-bold">{userFriends.length}</p>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Posts Feed */}
-              <div className="space-y-4">
-                {posts.length === 0 ? (
-                  <Card className="p-8 text-center shadow-soft border-0">
-                    <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Be the first to share an update with your community!
+                  <Users className="h-8 w-8 text-primary opacity-20" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-0 shadow-soft">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Your Posts</p>
+                    <p className="text-2xl font-bold">
+                      {posts.filter(p => p.userId === user.id).length}
                     </p>
-                    <Button variant="medical" onClick={() => document.querySelector('textarea')?.focus()}>
-                      Create Your First Post
-                    </Button>
+                  </div>
+                  <BookOpen className="h-8 w-8 text-primary opacity-20" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-0 shadow-soft">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Events</p>
+                    <p className="text-2xl font-bold">{upcomingEvents.length}</p>
+                  </div>
+                  <Calendar className="h-8 w-8 text-primary opacity-20" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-0 shadow-soft">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Profile</p>
+                    <Progress value={profileCompletion} className="mt-2" />
+                  </div>
+                  <Award className="h-8 w-8 text-primary opacity-20" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{profileCompletion}% complete</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Feed Column */}
+          <div className="lg:col-span-2 space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="activity">Activity</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="space-y-4">
+                {/* Create Post */}
+                <Card className="border-0 shadow-soft">
+                  <CardContent className="p-4">
+                    <div className="flex space-x-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.profileImageUrl} />
+                        <AvatarFallback>
+                          {user.firstName[0]}{user.lastName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-3">
+                        <Textarea
+                          placeholder="Share an update with your network..."
+                          value={newPost}
+                          onChange={(e) => setNewPost(e.target.value)}
+                          className="min-h-[80px] resize-none"
+                        />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Button variant="ghost" size="sm">
+                              <Image className="h-4 w-4 mr-1" />
+                              Photo
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <FileText className="h-4 w-4 mr-1" />
+                              Document
+                            </Button>
+                            <Select value={postVisibility} onValueChange={(v: any) => setPostVisibility(v)}>
+                              <SelectTrigger className="w-32 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="yeargroup">
+                                  <div className="flex items-center">
+                                    <Users className="h-3 w-3 mr-1" />
+                                    Yeargroup
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="friends">
+                                  <div className="flex items-center">
+                                    <Lock className="h-3 w-3 mr-1" />
+                                    Friends Only
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button 
+                            variant="medical" 
+                            size="sm"
+                            onClick={handleCreatePost}
+                            disabled={!newPost.trim()}
+                          >
+                            <Send className="h-4 w-4 mr-1" />
+                            Post
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recent Activity Feed */}
+                {feedPosts.length === 0 ? (
+                  <Card className="border-0 shadow-soft p-8 text-center">
+                    <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
+                    <p className="text-muted-foreground">
+                      Connect with colleagues to see their updates here
+                    </p>
                   </Card>
                 ) : (
-                  posts.map((post) => {
-                    const author = getDoctorById(post.authorId);
-                    if (!author) return null;
-
+                  feedPosts.map((post) => {
+                    const author = getPostAuthor(post.userId);
+                    const isLiked = post.likedBy.includes(user.id);
+                    
                     return (
-                      <Card key={post.id} className="shadow-soft border-0">
-                        <CardContent className="p-6">
-                          {/* Post Header */}
-                          <div className="flex items-start space-x-3 mb-4">
-                            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                              <span className="text-sm font-medium text-primary-foreground">
-                                {author.name.split(' ').map(n => n[0]).join('')}
-                              </span>
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <h4 className="font-semibold text-foreground">{author.name}</h4>
-                                <span className="medical-badge">
-                                  {author.specialty}
-                                </span>
+                      <Card key={post.id} className="border-0 shadow-soft">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={author?.profileImageUrl} />
+                                <AvatarFallback>
+                                  {author?.firstName[0]}{author?.lastName[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h4 className="font-semibold">
+                                  Dr. {author?.firstName} {author?.lastName}
+                                  {author?.id === user.id && <Badge className="ml-2 text-xs">You</Badge>}
+                                </h4>
+                                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                  <span>{author?.specialty}</span>
+                                  <span>•</span>
+                                  <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                                  {post.visibility === 'friends' && (
+                                    <>
+                                      <span>•</span>
+                                      <Lock className="h-3 w-3" />
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                <Clock className="w-3 h-3" />
-                                <span>{formatRelativeTime(post.createdAt)}</span>
-                                <span>•</span>
-                                <span className="capitalize">{post.visibility}</span>
-                              </div>
                             </div>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
                           </div>
-
-                          {/* Post Content */}
-                          <div className="mb-4">
-                            <p className="text-foreground leading-relaxed">{post.content}</p>
-                          </div>
-
-                          {/* Post Actions */}
-                          <div className="flex items-center space-x-6 pt-3 border-t border-border">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleLikePost(post.id)}
-                              className="flex items-center space-x-1 hover:text-red-500"
-                            >
-                              <Heart className="w-4 h-4" />
-                              <span>{post.likes}</span>
-                            </Button>
-                            
-                            <Button variant="ghost" size="sm" className="flex items-center space-x-1">
-                              <MessageCircle className="w-4 h-4" />
-                              <span>{post.comments.length}</span>
-                            </Button>
-                            
-                            <Button variant="ghost" size="sm" className="flex items-center space-x-1">
-                              <Share2 className="w-4 h-4" />
-                              <span>Share</span>
-                            </Button>
+                          
+                          <p className="text-foreground mb-3">{post.content}</p>
+                          
+                          {post.imageUrls.length > 0 && (
+                            <div className="mb-3 grid grid-cols-2 gap-2">
+                              {post.imageUrls.map((url, idx) => (
+                                <img 
+                                  key={idx}
+                                  src={url}
+                                  alt=""
+                                  className="rounded-lg w-full h-48 object-cover"
+                                />
+                              ))}
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between pt-3 border-t">
+                            <div className="flex items-center space-x-4">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleLikePost(post.id)}
+                                className={isLiked ? 'text-red-500' : ''}
+                              >
+                                <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
+                                {post.likesCount}
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <MessageCircle className="h-4 w-4 mr-1" />
+                                {post.commentsCount}
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Share2 className="h-4 w-4 mr-1" />
+                                Share
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
                     );
                   })
                 )}
-              </div>
-            </div>
+              </TabsContent>
 
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Quick Stats */}
-              <Card className="shadow-soft border-0">
-                <CardHeader>
-                  <CardTitle>Your Network</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Users className="w-4 h-4 text-primary" />
-                      <span className="text-sm">Year Group</span>
-                    </div>
-                    <span className="font-semibold">{quickStats.yearGroupMembers}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Heart className="w-4 h-4 text-success" />
-                      <span className="text-sm">Friends</span>
-                    </div>
-                    <span className="font-semibold">{quickStats.friendsCount}</span>
-                  </div>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => navigate('/yeargroup')}
-                  >
-                    View Year Group
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Quick Actions */}
-              <Card className="shadow-soft border-0">
-                <CardHeader>
-                  <CardTitle>Quick Access</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button 
-                    variant="professional" 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => navigate('/jobs')}
-                  >
-                    <Briefcase className="w-4 h-4" />
-                    Browse Jobs ({quickStats.activeJobs})
-                  </Button>
-                  
-                  <Button 
-                    variant="professional" 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => navigate('/properties')}
-                  >
-                    <Home className="w-4 h-4" />
-                    Properties ({quickStats.availableProperties})
-                  </Button>
-                  
-                  <Button 
-                    variant="professional" 
-                    size="sm" 
-                    className="w-full justify-start"
-                    onClick={() => navigate('/events')}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Upcoming Events
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card className="shadow-soft border-0">
-                <CardHeader>
-                  <CardTitle>Recent Jobs</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {mockJobs.slice(0, 2).map((job) => (
-                    <div key={job.id} className="border-l-4 border-success pl-3 pb-3 border-b border-border last:border-b-0 last:pb-0">
-                      <h4 className="font-medium text-sm text-foreground mb-1">{job.title}</h4>
-                      <div className="flex items-center space-x-1 text-xs text-muted-foreground mb-1">
-                        <MapPin className="w-3 h-3" />
-                        <span>{job.location}</span>
+              <TabsContent value="timeline" className="space-y-4">
+                <Card className="border-0 shadow-soft">
+                  <CardHeader>
+                    <CardTitle>Your Timeline</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex space-x-3">
+                        <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                        <div className="flex-1">
+                          <p className="font-medium">Joined MyYearGroup</p>
+                          <p className="text-sm text-muted-foreground">
+                            {user.createdAt.toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-xs text-success font-medium">{job.type}</span>
+                      {user.approvedAt && (
+                        <div className="flex space-x-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="font-medium">Account Approved</p>
+                            <p className="text-sm text-muted-foreground">
+                              {user.approvedAt.toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {posts.filter(p => p.userId === user.id).slice(0, 3).map(post => (
+                        <div key={post.id} className="flex space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="font-medium">Posted an update</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(post.createdAt).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm mt-1 line-clamp-2">{post.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="activity" className="space-y-4">
+                <Card className="border-0 shadow-soft">
+                  <CardHeader>
+                    <CardTitle>Recent Activity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <TrendingUp className="h-5 w-5 text-green-500" />
+                          <div>
+                            <p className="font-medium">Profile views this week</p>
+                            <p className="text-sm text-muted-foreground">12 medical professionals viewed your profile</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Heart className="h-5 w-5 text-red-500" />
+                          <div>
+                            <p className="font-medium">Post engagement</p>
+                            <p className="text-sm text-muted-foreground">Your posts received 34 likes this month</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Users className="h-5 w-5 text-blue-500" />
+                          <div>
+                            <p className="font-medium">New connections</p>
+                            <p className="text-sm text-muted-foreground">3 new colleagues connected with you</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Upcoming Events */}
+            {upcomingEvents.length > 0 && (
+              <Card className="border-0 shadow-soft">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Upcoming Events</CardTitle>
+                    <Link to="/events">
+                      <Button variant="ghost" size="sm">
+                        View all
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {upcomingEvents.map(event => (
+                    <div key={event.id} className="space-y-2">
+                      <h4 className="font-medium text-sm">{event.title}</h4>
+                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>{new Date(event.eventDate).toLocaleDateString()}</span>
+                        <MapPin className="h-3 w-3 ml-2" />
+                        <span>{event.location}</span>
+                      </div>
+                      <Button variant="outline" size="sm" className="w-full">
+                        RSVP
+                      </Button>
                     </div>
                   ))}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => navigate('/jobs')}
-                  >
-                    View All Jobs
-                  </Button>
                 </CardContent>
               </Card>
-            </div>
+            )}
+
+            {/* Latest Opportunities */}
+            <Card className="border-0 shadow-soft">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Latest Opportunities</CardTitle>
+                  <Link to="/jobs">
+                    <Button variant="ghost" size="sm">
+                      View all
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {recentJobs.slice(0, 2).map(job => (
+                  <div key={job.id} className="space-y-1">
+                    <h4 className="font-medium text-sm line-clamp-1">{job.title}</h4>
+                    <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                      <Briefcase className="h-3 w-3" />
+                      <span>{job.hospital}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      <span>{job.location}</span>
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/jobs')}>
+                  Browse all jobs
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Property Exchange */}
+            <Card className="border-0 shadow-soft">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Property Exchange</CardTitle>
+                  <Link to="/properties">
+                    <Button variant="ghost" size="sm">
+                      View all
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {recentProperties.slice(0, 2).map(property => (
+                  <div key={property.id} className="space-y-1">
+                    <h4 className="font-medium text-sm line-clamp-1">{property.title}</h4>
+                    <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                      <Home className="h-3 w-3" />
+                      <span>{property.type === 'swap' ? 'House Swap' : 'For Rent'}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      <span>{property.location}</span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="border-0 shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-base">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/yeargroup')}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Visit Your Yeargroup
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/search')}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Find Colleagues
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/events')}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Create Event
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

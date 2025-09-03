@@ -1,13 +1,31 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "myyeargroup-connect",
+  "displayName": "MyYearGroup",
+  "description": "A private professional network for UK medical doctors to connect with their graduation yeargroup colleagues",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "author": {
+    "name": "MyYearGroup Team",
+    "email": "contact@myyeargroup.com"
+  },
+  "keywords": [
+    "medical",
+    "doctors",
+    "network",
+    "UK",
+    "NHS",
+    "GMC",
+    "professional",
+    "yeargroup"
+  ],
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "type-check": "tsc --noEmit",
     "preview": "vite preview"
   },
   "dependencies": {

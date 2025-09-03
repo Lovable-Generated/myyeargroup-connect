@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/enhanced-button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -9,66 +9,100 @@ import { Navbar } from '@/components/layout/Navbar';
 import { medicalSchools, specialties } from '@/data/mockData';
 import { Stethoscope, UserPlus, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { register, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
-    medicalSchool: '',
+    medicalSchoolId: '',
     graduationYear: '',
     specialty: '',
     gmcNumber: '',
+    currentPosition: '',
+    location: '',
     password: '',
     confirmPassword: '',
   });
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const currentYear = new Date().getFullYear();
   const graduationYears = Array.from({ length: 50 }, (_, i) => currentYear - i);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     // Basic validation
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "Please ensure both passwords match.",
-        variant: "destructive",
-      });
+      setError("Passwords don't match");
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long");
       setIsLoading(false);
       return;
     }
 
     if (formData.gmcNumber.length < 7) {
-      toast({
-        title: "Invalid GMC Number",
-        description: "Please enter a valid GMC registration number.",
-        variant: "destructive",
-      });
+      setError("Please enter a valid GMC registration number");
       setIsLoading(false);
       return;
     }
 
-    // Simulate registration process
-    setTimeout(() => {
-      toast({
-        title: "Registration Submitted!",
-        description: "Your application is pending approval from our admin team. You'll receive an email once approved.",
+    try {
+      await register({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        gmcNumber: formData.gmcNumber,
+        medicalSchoolId: formData.medicalSchoolId,
+        graduationYear: parseInt(formData.graduationYear),
+        specialty: formData.specialty,
+        currentPosition: formData.currentPosition,
+        location: formData.location,
       });
-      setIsLoading(false);
+      
       navigate('/login?registered=true');
-    }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const isFormValid = Object.values(formData).every(value => value.trim() !== '');
+  const isFormValid = 
+    formData.firstName && 
+    formData.lastName && 
+    formData.email && 
+    formData.medicalSchoolId && 
+    formData.graduationYear && 
+    formData.specialty && 
+    formData.gmcNumber && 
+    formData.password && 
+    formData.confirmPassword;
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,30 +132,62 @@ export default function Register() {
             </CardHeader>
             
             <CardContent>
+              {/* Info Alert */}
+              <div className="mb-6">
+                <Alert className="border-primary/20 bg-primary/5">
+                  <AlertCircle className="h-4 w-4 text-primary" />
+                  <AlertDescription>
+                    All registrations are verified by our admin team. You'll need a valid GMC number to join.
+                  </AlertDescription>
+                </Alert>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-6">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
                 {/* Personal Information */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-foreground">Personal Information</h3>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Dr. John Smith"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="medical-input"
-                      required
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        placeholder="John"
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        className="medical-input"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Doe"
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        className="medical-input"
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
+                    <Label htmlFor="email">Email Address *</Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="john.smith@nhs.uk"
+                      placeholder="john.doe@nhs.uk"
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
                       className="medical-input"
@@ -130,32 +196,32 @@ export default function Register() {
                   </div>
                 </div>
 
-                {/* Medical Qualifications */}
+                {/* Professional Information */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground">Medical Qualifications</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Professional Information</h3>
                   
-                  <div className="space-y-2">
-                    <Label>Medical School</Label>
-                    <Select value={formData.medicalSchool} onValueChange={(value) => handleInputChange('medicalSchool', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your medical school" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {medicalSchools.map((school) => (
-                          <SelectItem key={school.id} value={school.name}>
-                            {school.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Graduation Year</Label>
+                      <Label htmlFor="medicalSchool">Medical School *</Label>
+                      <Select value={formData.medicalSchoolId} onValueChange={(value) => handleInputChange('medicalSchoolId', value)}>
+                        <SelectTrigger className="medical-input">
+                          <SelectValue placeholder="Select your medical school" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {medicalSchools.map((school) => (
+                            <SelectItem key={school.id} value={school.id}>
+                              {school.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="graduationYear">Graduation Year *</Label>
                       <Select value={formData.graduationYear} onValueChange={(value) => handleInputChange('graduationYear', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Year" />
+                        <SelectTrigger className="medical-input">
+                          <SelectValue placeholder="Select graduation year" />
                         </SelectTrigger>
                         <SelectContent>
                           {graduationYears.map((year) => (
@@ -166,12 +232,14 @@ export default function Register() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Current Specialty</Label>
+                      <Label htmlFor="specialty">Specialty *</Label>
                       <Select value={formData.specialty} onValueChange={(value) => handleInputChange('specialty', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Specialty" />
+                        <SelectTrigger className="medical-input">
+                          <SelectValue placeholder="Select your specialty" />
                         </SelectTrigger>
                         <SelectContent>
                           {specialties.map((specialty) => (
@@ -182,32 +250,55 @@ export default function Register() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gmcNumber">GMC Number *</Label>
+                      <Input
+                        id="gmcNumber"
+                        type="text"
+                        placeholder="1234567"
+                        value={formData.gmcNumber}
+                        onChange={(e) => handleInputChange('gmcNumber', e.target.value)}
+                        className="medical-input"
+                        required
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="gmcNumber">GMC Registration Number</Label>
-                    <Input
-                      id="gmcNumber"
-                      type="text"
-                      placeholder="GMC7891234"
-                      value={formData.gmcNumber}
-                      onChange={(e) => handleInputChange('gmcNumber', e.target.value)}
-                      className="medical-input"
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Required for verification. Your GMC number will be verified by our admin team.
-                    </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="currentPosition">Current Position</Label>
+                      <Input
+                        id="currentPosition"
+                        type="text"
+                        placeholder="Consultant, Registrar, etc."
+                        value={formData.currentPosition}
+                        onChange={(e) => handleInputChange('currentPosition', e.target.value)}
+                        className="medical-input"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        type="text"
+                        placeholder="London, Manchester, etc."
+                        value={formData.location}
+                        onChange={(e) => handleInputChange('location', e.target.value)}
+                        className="medical-input"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Security */}
+                {/* Password */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground">Account Security</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Set Password</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">Password *</Label>
                       <Input
                         id="password"
                         type="password"
@@ -217,10 +308,13 @@ export default function Register() {
                         className="medical-input"
                         required
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Minimum 8 characters
+                      </p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Label htmlFor="confirmPassword">Confirm Password *</Label>
                       <Input
                         id="confirmPassword"
                         type="password"
@@ -230,20 +324,6 @@ export default function Register() {
                         className="medical-input"
                         required
                       />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Verification Notice */}
-                <div className="bg-accent rounded-lg p-4 border border-accent-foreground/20">
-                  <div className="flex items-start space-x-3">
-                    <AlertCircle className="w-5 h-5 text-primary mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-foreground mb-1">Verification Process</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Your application will be reviewed by our admin team. We'll verify your GMC registration 
-                        and medical school details. You'll receive an email notification once approved.
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -259,12 +339,12 @@ export default function Register() {
                   {isLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Processing Application...
+                      Submitting Application...
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      Submit Application
+                      Submit Registration
                     </>
                   )}
                 </Button>
@@ -281,6 +361,20 @@ export default function Register() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Information Box */}
+          <div className="mt-8 p-6 bg-accent/50 rounded-lg border border-accent-foreground/20">
+            <h3 className="font-semibold mb-2 flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-primary" />
+              <span>What happens next?</span>
+            </h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>• Your GMC number will be verified by our admin team</li>
+              <li>• You'll receive an email to verify your address</li>
+              <li>• Once approved, you'll be able to access your yeargroup</li>
+              <li>• Approval usually takes 1-2 business days</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

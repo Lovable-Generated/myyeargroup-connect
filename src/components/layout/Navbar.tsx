@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/enhanced-button';
+import { NotificationBell } from './NotificationBell';
 import {
   Search,
   User,
-  Bell,
   Menu,
   X,
   Stethoscope,
@@ -12,6 +12,8 @@ import {
   Briefcase,
   Home,
   Calendar,
+  LogOut,
+  Shield,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -31,6 +33,11 @@ export const Navbar = ({ isAuthenticated = false, user }: NavbarProps) => {
     { name: 'Properties', href: '/properties', icon: Home },
     { name: 'Events', href: '/events', icon: Calendar },
   ];
+  
+  // Add admin link if user is admin
+  if (user?.role === 'superadmin') {
+    navigationItems.push({ name: 'Admin', href: '/admin', icon: Shield });
+  }
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -120,9 +127,7 @@ export const Navbar = ({ isAuthenticated = false, user }: NavbarProps) => {
             </Button>
 
             {/* Notifications */}
-            <Button variant="ghost" size="icon">
-              <Bell className="w-5 h-5" />
-            </Button>
+            <NotificationBell />
 
             {/* Profile Menu */}
             <div className="relative">
@@ -145,9 +150,10 @@ export const Navbar = ({ isAuthenticated = false, user }: NavbarProps) => {
               variant="outline" 
               size="sm"
               onClick={handleLogout}
-              className="hidden sm:flex"
+              className="hidden sm:flex items-center space-x-2"
             >
-              Logout
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
             </Button>
 
             {/* Mobile menu button */}

@@ -1,22 +1,35 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/enhanced-button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Navbar } from '@/components/layout/Navbar';
-import { LogIn, Stethoscope, CheckCircle } from 'lucide-react';
+import { LogIn, Stethoscope, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const { login, user } = useAuth();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from);
+    }
+  }, [user, navigate, location]);
 
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
@@ -29,37 +42,23 @@ export default function Login() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // Simulate login process
-    setTimeout(() => {
-      // Mock authentication - in real app this would validate credentials
-      if (formData.email && formData.password) {
-        toast({
-          title: "Welcome back!",
-          description: "You've been successfully logged in.",
-        });
-        // Store mock auth state in localStorage
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('user', JSON.stringify({
-          id: '1',
-          name: 'Dr. Sarah Johnson',
-          email: formData.email,
-        }));
-        navigate('/dashboard');
-      } else {
-        toast({
-          title: "Login Failed",
-          description: "Please check your email and password.",
-          variant: "destructive",
-        });
-      }
+    try {
+      await login(formData.email, formData.password);
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const isFormValid = formData.email && formData.password;
@@ -93,6 +92,13 @@ export default function Login() {
             
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
@@ -146,13 +152,21 @@ export default function Login() {
                   <div className="flex items-start space-x-3">
                     <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-foreground mb-1">Demo Login</h4>
+                      <h4 className="font-medium text-foreground mb-1">Demo Accounts</h4>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Use any email and password to access the demo version
+                        Try these demo accounts to explore the platform:
                       </p>
-                      <div className="text-xs font-mono bg-background rounded p-2 border">
-                        Email: demo@nhs.uk<br />
-                        Password: demo123
+                      <div className="space-y-2">
+                        <div className="text-xs font-mono bg-background rounded p-2 border">
+                          <strong>Member Account:</strong><br />
+                          Email: sarah.johnson@nhs.uk<br />
+                          Password: password123
+                        </div>
+                        <div className="text-xs font-mono bg-background rounded p-2 border">
+                          <strong>Admin Account:</strong><br />
+                          Email: admin@myyeargroup.com<br />
+                          Password: admin123
+                        </div>
                       </div>
                     </div>
                   </div>
