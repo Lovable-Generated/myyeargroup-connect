@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { User, mockUsers, mockNotifications } from '@/data/enhancedMockData';
-import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -10,7 +10,8 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   notifications: typeof mockNotifications;
-  markNotificationAsRead: (notificationId: string) => void;
+  markNotificationRead: (notificationId: string) => void;
+  clearAllNotifications: () => void;
 }
 
 interface RegisterData {
@@ -40,7 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState(mockNotifications);
-  const { toast } = useToast();
 
   useEffect(() => {
     // Check for stored session
@@ -96,9 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userNotifications = mockNotifications.filter(n => n.userId === foundUser.id);
     setNotifications(userNotifications);
     
-    toast({
-      title: "Welcome back!",
-      description: `Logged in as ${foundUser.firstName} ${foundUser.lastName}`,
+    toast.success(`Welcome back, Dr. ${foundUser.firstName}!`, {
+      description: `Logged in successfully`,
     });
     
     setIsLoading(false);
@@ -157,8 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: new Date(),
     });
     
-    toast({
-      title: "Registration successful!",
+    toast.success("Registration successful!", {
       description: "Please check your email for verification and await admin approval.",
     });
     
@@ -170,8 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('currentUser');
     setNotifications([]);
     
-    toast({
-      title: "Logged out",
+    toast.info("Logged out", {
       description: "You have been successfully logged out.",
     });
   };
@@ -194,19 +191,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mockUsers[userIndex] = updatedUser;
     }
     
-    toast({
-      title: "Profile updated",
+    toast.success("Profile updated", {
       description: "Your profile has been successfully updated.",
     });
     
     setIsLoading(false);
   };
 
-  const markNotificationAsRead = (notificationId: string) => {
+  const markNotificationRead = (notificationId: string) => {
     setNotifications(prev => 
       prev.map(n => 
         n.id === notificationId ? { ...n, isRead: true } : n
       )
+    );
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications(prev => 
+      prev.map(n => ({ ...n, isRead: true }))
     );
   };
 
@@ -220,7 +222,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         updateProfile,
         notifications,
-        markNotificationAsRead,
+        markNotificationRead,
+        clearAllNotifications,
       }}
     >
       {children}
