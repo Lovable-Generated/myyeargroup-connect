@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/enhanced-button';
 import { NotificationBell } from './NotificationBell';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Search,
   User,
@@ -17,11 +18,11 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
-  isAuthenticated?: boolean;
-  user?: any;
+  className?: string;
 }
 
-export const Navbar = ({ isAuthenticated = false, user }: NavbarProps) => {
+export const Navbar = ({ className }: NavbarProps) => {
+  const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,11 +43,11 @@ export const Navbar = ({ isAuthenticated = false, user }: NavbarProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = () => {
-    // Mock logout - in real app this would clear auth state
+    logout();
     navigate('/');
   };
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <nav className="bg-card border-b border-border shadow-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -81,7 +82,7 @@ export const Navbar = ({ isAuthenticated = false, user }: NavbarProps) => {
   }
 
   return (
-    <nav className="bg-card border-b border-border shadow-soft sticky top-0 z-50">
+    <nav className="bg-card/95 backdrop-blur-sm border-b border-border shadow-lg sticky top-0 z-50 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -140,7 +141,7 @@ export const Navbar = ({ isAuthenticated = false, user }: NavbarProps) => {
                   <User className="w-4 h-4 text-primary-foreground" />
                 </div>
                 <span className="hidden sm:block text-sm font-medium">
-                  {user?.name || 'Profile'}
+                  {user?.firstName} {user?.lastName}
                 </span>
               </Button>
             </div>

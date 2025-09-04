@@ -180,113 +180,82 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Welcome Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={user.profileImageUrl} />
-                <AvatarFallback>
-                  {user.firstName[0]}{user.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-3xl font-bold">
-                  Welcome back, Dr. {user.firstName}!
-                </h1>
-                <div className="flex items-center space-x-3 text-muted-foreground mt-1">
-                  <span className="flex items-center">
-                    <Stethoscope className="h-4 w-4 mr-1" />
-                    {user.specialty}
-                  </span>
-                  <span className="flex items-center">
-                    <School className="h-4 w-4 mr-1" />
-                    {userSchool?.name}
-                  </span>
-                  <span className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    Class of {user.graduationYear}
-                  </span>
+        <div className="animate-in fade-in-0 slide-in-from-top-4 duration-700">
+          <Card className="medical-gradient text-white overflow-hidden shadow-2xl border-0">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6">
+                  <Avatar className="h-20 w-20 border-4 border-white/20 shadow-xl">
+                    <AvatarImage src={user.profileImageUrl} />
+                    <AvatarFallback className="text-primary text-lg font-bold bg-white">
+                      {user.firstName[0]}{user.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-3">
+                    <div>
+                      <h1 className="text-4xl font-bold tracking-tight">
+                        Welcome back, Dr. {user.firstName}!
+                      </h1>
+                      <div className="flex items-center space-x-4 text-white/90 mt-2">
+                        <span className="flex items-center bg-white/10 rounded-full px-3 py-1">
+                          <Stethoscope className="h-4 w-4 mr-2" />
+                          {user.specialty}
+                        </span>
+                        <span className="flex items-center bg-white/10 rounded-full px-3 py-1">
+                          <School className="h-4 w-4 mr-2" />
+                          {userSchool?.name}
+                        </span>
+                        <span className="flex items-center bg-white/10 rounded-full px-3 py-1">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Class of {user.graduationYear}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Stats Row */}
+                    <div className="flex items-center space-x-8 text-sm bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                      <div className="text-center">
+                        <div className="font-bold text-2xl">{userFriends.length}</div>
+                        <div className="text-white/70">connections</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl">{posts.filter(p => p.userId === user.id).length}</div>
+                        <div className="text-white/70">posts</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl">{upcomingEvents.length}</div>
+                        <div className="text-white/70">events</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl">{profileCompletion}%</div>
+                        <div className="text-white/70">complete</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Button variant="secondary" size="sm" onClick={() => navigate('/search')} className="bg-white/20 border-white/30 text-white hover:bg-white/30">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Find Colleagues
+                  </Button>
+                  <Button variant="secondary" size="sm" className="bg-white/20 border-white/30 text-white hover:bg-white/30">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Button>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={() => navigate('/search')}>
-                <UserPlus className="h-4 w-4 mr-1" />
-                Find Colleagues
-              </Button>
-              <Button variant="outline" size="sm" className="relative">
-                <Bell className="h-4 w-4" />
-                {unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {unreadNotifications}
-                  </span>
-                )}
-              </Button>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="border-0 shadow-soft">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Connections</p>
-                    <p className="text-2xl font-bold">{userFriends.length}</p>
-                  </div>
-                  <Users className="h-8 w-8 text-primary opacity-20" />
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-0 shadow-soft">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Your Posts</p>
-                    <p className="text-2xl font-bold">
-                      {posts.filter(p => p.userId === user.id).length}
-                    </p>
-                  </div>
-                  <BookOpen className="h-8 w-8 text-primary opacity-20" />
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-0 shadow-soft">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Events</p>
-                    <p className="text-2xl font-bold">{upcomingEvents.length}</p>
-                  </div>
-                  <Calendar className="h-8 w-8 text-primary opacity-20" />
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-0 shadow-soft">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Profile</p>
-                    <Progress value={profileCompletion} className="mt-2" />
-                  </div>
-                  <Award className="h-8 w-8 text-primary opacity-20" />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{profileCompletion}% complete</p>
-              </CardContent>
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Main Content Area */}
+        <div className="animate-in fade-in-0 slide-in-from-left-4 duration-700 delay-200">
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -672,6 +641,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        </div>
         </div>
       </div>
     </div>

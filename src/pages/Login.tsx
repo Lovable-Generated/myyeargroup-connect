@@ -64,25 +64,32 @@ export default function Login() {
   const isFormValid = formData.email && formData.password;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-primary rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-40 right-20 w-72 h-72 bg-secondary rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-40 w-72 h-72 bg-accent rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+      </div>
+      
       <Navbar />
       
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-12 relative">
         <div className="max-w-md mx-auto">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="medical-gradient w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <LogIn className="w-8 h-8 text-white" />
+          {/* Enhanced Header */}
+          <div className="text-center mb-10 animate-in fade-in-0 slide-in-from-top-4 duration-700">
+            <div className="medical-gradient w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+              <LogIn className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
+            <h1 className="text-4xl font-heading font-bold text-foreground mb-3 tracking-tight">
               Welcome Back
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-lg">
               Sign in to your MyYearGroup account
             </p>
           </div>
 
-          <Card className="shadow-medium border-0">
+          <Card className="shadow-2xl border-0 backdrop-blur-sm bg-card/95 animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-200">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Stethoscope className="w-5 h-5 text-primary" />

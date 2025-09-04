@@ -153,21 +153,31 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="medical-gradient w-12 h-12 rounded-xl flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-              <p className="text-muted-foreground">Manage users, approvals, and platform settings</p>
-            </div>
-          </div>
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Enhanced Header */}
+        <div className="animate-in fade-in-0 slide-in-from-top-4 duration-700">
+          <Card className="medical-gradient text-white overflow-hidden shadow-2xl border-0">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6">
+                  <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Shield className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-4xl font-bold tracking-tight">Admin Dashboard</h1>
+                    <p className="text-white/90 text-lg">Manage users, approvals, and platform settings</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">{users.length}</div>
+                  <div className="text-white/70 text-sm">Total Users</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Statistics Cards */}

@@ -183,31 +183,36 @@ export default function YearGroup() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <Navbar />
       
-      {/* Yeargroup Header */}
-      <div className="relative h-48 md:h-64 bg-gradient-to-r from-primary to-primary/80">
+      {/* Enhanced Yeargroup Header */}
+      <div className="relative h-56 md:h-72 overflow-hidden">
+        <div className="absolute inset-0 medical-gradient" />
         <div 
-          className="absolute inset-0 bg-cover bg-center opacity-20"
+          className="absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-30"
           style={{ backgroundImage: `url('${yeargroup.coverImageUrl}')` }}
         />
-        <div className="relative container mx-auto px-4 h-full flex items-end pb-6">
-          <div className="text-white">
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">{yeargroup.name}</h1>
-            <div className="flex items-center space-x-4 text-white/90">
-              <span className="flex items-center">
-                <School className="h-4 w-4 mr-1" />
-                {school?.name}
-              </span>
-              <span className="flex items-center">
-                <Users className="h-4 w-4 mr-1" />
-                {yeargroupMembers.length} members
-              </span>
-              <span className="flex items-center">
-                <Calendar className="h-4 w-4 mr-1" />
-                Class of {yeargroup.graduationYear}
-              </span>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        
+        <div className="relative container mx-auto px-4 h-full flex items-end pb-8">
+          <div className="text-white space-y-4 w-full">
+            <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+              <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">{yeargroup.name}</h1>
+              <div className="flex flex-wrap items-center gap-4 text-white/90">
+                <span className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+                  <School className="h-5 w-5 mr-2" />
+                  {school?.name}
+                </span>
+                <span className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+                  <Users className="h-5 w-5 mr-2" />
+                  {yeargroupMembers.length} members
+                </span>
+                <span className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Class of {yeargroup.graduationYear}
+                </span>
+              </div>
             </div>
           </div>
         </div>
